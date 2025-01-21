@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import json
 
 # -----------------------------
 # 1) Page Config & Custom CSS
@@ -55,6 +56,17 @@ hr {
     border: 1px solid #e0e0e0;
     margin-bottom: 10px;
 }
+
+/* Style for the JSON view icon */
+.json-icon {
+    cursor: pointer;
+    font-size: 16px;
+    margin-left: 10px;
+    color: #555;
+}
+.json-icon:hover {
+    color: #000;
+}
 </style>
 """
 st.markdown(custom_css, unsafe_allow_html=True)
@@ -62,19 +74,15 @@ st.markdown(custom_css, unsafe_allow_html=True)
 # -------------------------------------------------------
 # 2) Define the initial chat history (same for all 3 bots)
 # -------------------------------------------------------
-initial_chat_history = [
-    
-]
+initial_chat_history = []
 
 # -----------------------------------
 # 3) Session State for Chat Histories
 # -----------------------------------
-if "col1_chatHistory" not in st.session_state:
-    st.session_state["col1_chatHistory"] = initial_chat_history.copy()
-if "col2_chatHistory" not in st.session_state:
-    st.session_state["col2_chatHistory"] = initial_chat_history.copy()
-if "col3_chatHistory" not in st.session_state:
-    st.session_state["col3_chatHistory"] = initial_chat_history.copy()
+for i in range(1, 4):
+    key = f"col{i}_chatHistory"
+    if key not in st.session_state:
+        st.session_state[key] = initial_chat_history.copy()
 
 # -----------------------------------
 # 4) Session State for Base URL
@@ -82,13 +90,20 @@ if "col3_chatHistory" not in st.session_state:
 if "base_url" not in st.session_state:
     st.session_state["base_url"] = "http://127.0.0.1:8000"
 
+# -----------------------------------
+# 5) Session State for JSON Popups
+# -----------------------------------
+if "json_popups" not in st.session_state:
+    st.session_state["json_popups"] = {}  # Dictionary to store which messages have JSON popups open
+
 # -------------------------------------------------------
-# 5) Helper function to display chat messages
+# 6) Helper function to display chat messages
 # -------------------------------------------------------
 def display_chat(chat_history, container_id):
     """
     Display the conversation with assistant on the left,
     and user on the right using basic HTML alignment.
+    Adds a JSON view expander next to assistant messages.
     """
     # Container for messages
     container_style = f"""
@@ -110,19 +125,62 @@ def display_chat(chat_history, container_id):
     st.markdown(f"<div id='{container_id}'>", unsafe_allow_html=True)
     
     # Display each message
-    for msg in chat_history:
+    for idx, msg in enumerate(chat_history):
         if msg["role"] == "assistant":
+            # Display assistant message
             st.markdown(
-                f"<div style='text-align: left; background-color: #F0F0F0; "
-                f"padding: 8px; margin: 5px 0; border-radius: 5px;'>"
-                f"<b>Assistant:</b> {msg['content']}</div>",
+                f"""
+                <div style='text-align: left; background-color: #F0F0F0; 
+                padding: 8px; margin: 5px 0; border-radius: 5px; position: relative;'>
+                    <b>Assistant:</b> {msg['content']}
+                </div>
+                """,
                 unsafe_allow_html=True
             )
+            # Add expander for JSON
+            with st.expander("View Top Chunks", expanded=False):
+                full_response = msg.get("full_response", {})
+                
+                # Extract required fields
+                top_references = full_response.get("top_references", [])
+                sources = full_response.get("source", [])
+                metadata = full_response.get("metadata", [])
+                
+                # Check if all lists are of the same length
+                if len(top_references) == len(sources) == len(metadata):
+                    for chunk_num in range(min(5,len(top_references))):
+                        st.markdown(f"#### Chunk {chunk_num+1}: \n\n{top_references[chunk_num]}")
+                        st.markdown(f"``` Source: {sources[chunk_num]} ```")
+                        headers = metadata[chunk_num].get("headers", {})
+                        chunk_attributes = metadata[chunk_num].get("chunk_attributes", {})
+                        if chunk_attributes:
+                            chunk_page = metadata[chunk_num].get("chunk_attributes", {}).get("page_idx",{})
+                            sibling_chunks = metadata[chunk_num].get("sibling_chunks", {})
+                            sibling_md = "\nSiblings: \n"
+                            for sibling in sibling_chunks:
+                                sibling_md+="- "+sibling+"\n"
+                            st.markdown(f"```{sibling_md}```")
+                        elif headers:
+                            headers_md = "\nHeaders: \n"
+                            for header_key, header_value in headers.items():
+                                headers_md += f"{header_key}: {header_value}; "
+                            st.markdown(f"```{headers_md}```")
+                        else:
+                            # st.markdown("**Headers:** Not Available")
+                            pass
+                        st.markdown("___")
+                else:
+                    st.warning("Mismatch in the lengths of top_references, source, and metadata.")
+                    
         elif msg["role"] == "user":
+            # Display user message
             st.markdown(
-                f"<div style='text-align: right; background-color: #D0F0FF; "
-                f"padding: 8px; margin: 5px 0; border-radius: 5px;'>"
-                f"<b>You:</b> {msg['content']}</div>",
+                f"""
+                <div style='text-align: right; background-color: #D0F0FF; 
+                padding: 8px; margin: 5px 0; border-radius: 5px;'>
+                    <b>You:</b> {msg['content']}
+                </div>
+                """,
                 unsafe_allow_html=True
             )
     
@@ -130,7 +188,7 @@ def display_chat(chat_history, container_id):
     st.markdown(f"</div>", unsafe_allow_html=True)
 
 # -------------------------------------------------------
-# 6) Function to update base_url
+# 7) Function to update base_url
 # -------------------------------------------------------
 def update_base_url(new_url):
     if new_url:
@@ -140,12 +198,12 @@ def update_base_url(new_url):
         st.warning("Please enter a valid URL.")
 
 # -------------------------------------------------------
-# 7) Main Layout
+# 8) Main Layout
 # -------------------------------------------------------
 st.title("Compare Chatbots Side by Side")
 
 # -------------------------------------------------------
-# 8) Input Section for API Base URL
+# 9) Input Section for API Base URL
 # -------------------------------------------------------
 st.markdown("### API Endpoint Configuration")
 
@@ -163,7 +221,7 @@ st.markdown("---")
 st.write(f"**Current API Base URL:** {st.session_state['base_url']}")
 
 # -------------------------------------------------------
-# 9) User input for the question
+# 10) User input for the question
 # -------------------------------------------------------
 user_question = st.text_input("Enter your question:", "")
 
@@ -187,66 +245,119 @@ if 'asked_any_bot' not in st.session_state:
 
 with col_button1:
     if st.button("Ask Normal Bot"):
-        st.session_state['asked_any_bot'] = True
-        payload1 = {
-            "question": user_question,
-            "index_name": "b7cb8fce-97cb-44bb-b022-ddd0a2ee4ea8",
-            "chat_history": st.session_state["col1_chatHistory"]
-        }
-        try:
-            response1 = requests.post(url_nBot, json=payload1)
-            response1.raise_for_status()  # Raise exception for HTTP errors
-            response1_data = response1.json()
-            updated_chat_history1 = response1_data.get("chat_history", [])
-            st.session_state["col1_chatHistory"] = updated_chat_history1
-        except Exception as e:
-            # Log error message in the chat as "assistant"
+        if user_question.strip() == "":
+            st.warning("Please enter a question before asking the bot.")
+        else:
+            st.session_state['asked_any_bot'] = True
+            
+            # Append user message to chat history
             st.session_state["col1_chatHistory"].append({
-                "role": "assistant",
-                "content": f"Error calling Normal Bot: {e}"
+                "role": "user",
+                "content": user_question
             })
+            
+            payload1 = {
+                "question": user_question,
+                "index_name": "b7cb8fce-97cb-44bb-b022-ddd0a2ee4ea8",
+                "chat_history": st.session_state["col1_chatHistory"]
+            }
+            try:
+                response1 = requests.post(url_nBot, json=payload1)
+                response1.raise_for_status()  # Raise exception for HTTP errors
+                response1_data = response1.json()
+                # Assuming response1_data contains 'final_output' and 'chat_history'
+                final_output1 = response1_data.get("final_output", "")
+                updated_chat_history1 = response1_data.get("chat_history", [])
+                
+                # Append the assistant message with full_response
+                st.session_state["col1_chatHistory"].append({
+                    "role": "assistant",
+                    "content": final_output1,
+                    "full_response": response1_data  # Store the entire response as full_response
+                })
+            except Exception as e:
+                # Log error message in the chat as "assistant"
+                st.session_state["col1_chatHistory"].append({
+                    "role": "assistant",
+                    "content": f"Error calling Normal Bot: {e}",
+                    "full_response": {}
+                })
 
 with col_button2:
     if st.button("Ask Normal Bot + Memory"):
-        st.session_state['asked_any_bot'] = True
-        payload2 = {
-            "question": user_question,
-            "index_name": "b7cb8fce-97cb-44bb-b022-ddd0a2ee4ea8",
-            "chat_history": st.session_state["col2_chatHistory"]
-        }
-        try:
-            response2 = requests.post(url_nBotMemory, json=payload2)
-            response2.raise_for_status()
-            response2_data = response2.json()
-            updated_chat_history2 = response2_data.get("chat_history", [])
-            st.session_state["col2_chatHistory"] = updated_chat_history2
-        except Exception as e:
+        if user_question.strip() == "":
+            st.warning("Please enter a question before asking the bot.")
+        else:
+            st.session_state['asked_any_bot'] = True
+            
+            # Append user message to chat history
             st.session_state["col2_chatHistory"].append({
-                "role": "assistant",
-                "content": f"Error calling Normal Bot + Memory: {e}"
+                "role": "user",
+                "content": user_question
             })
+            
+            payload2 = {
+                "question": user_question,
+                "index_name": "b7cb8fce-97cb-44bb-b022-ddd0a2ee4ea8",
+                "chat_history": st.session_state["col2_chatHistory"]
+            }
+            try:
+                response2 = requests.post(url_nBotMemory, json=payload2)
+                response2.raise_for_status()
+                response2_data = response2.json()
+                final_output2 = response2_data.get("final_output", "")
+                updated_chat_history2 = response2_data.get("chat_history", [])
+                
+                st.session_state["col2_chatHistory"].append({
+                    "role": "assistant",
+                    "content": final_output2,
+                    "full_response": response2_data
+                })
+            except Exception as e:
+                st.session_state["col2_chatHistory"].append({
+                    "role": "assistant",
+                    "content": f"Error calling Normal Bot + Memory: {e}",
+                    "full_response": {}
+                })
 
 with col_button3:
     if st.button("Ask Hybrid Bot"):
-        st.session_state['asked_any_bot'] = True
-        payload3 = {
-            "question": user_question,
-            "chat_history": st.session_state["col3_chatHistory"]
-        }
-        try:
-            response3 = requests.post(url_hBot, json=payload3)
-            response3.raise_for_status()
-            response3_data = response3.json()
-            updated_chat_history3 = response3_data.get("chat_history", [])
-            st.session_state["col3_chatHistory"] = updated_chat_history3
-        except Exception as e:
+        if user_question.strip() == "":
+            st.warning("Please enter a question before asking the bot.")
+        else:
+            st.session_state['asked_any_bot'] = True
+            
+            # Append user message to chat history
             st.session_state["col3_chatHistory"].append({
-                "role": "assistant",
-                "content": f"Error calling Hybrid Bot: {e}"
+                "role": "user",
+                "content": user_question
             })
+            
+            payload3 = {
+                "question": user_question,
+                "chat_history": st.session_state["col3_chatHistory"]
+            }
+            try:
+                response3 = requests.post(url_hBot, json=payload3)
+                response3.raise_for_status()
+                response3_data = response3.json()
+                final_output3 = response3_data.get("final_output", "")
+                updated_chat_history3 = response3_data.get("chat_history", [])
+                
+                st.session_state["col3_chatHistory"].append({
+                    "role": "assistant",
+                    "content": final_output3,
+                    "full_response": response3_data
+                })
+            except Exception as e:
+                st.session_state["col3_chatHistory"].append({
+                    "role": "assistant",
+                    "content": f"Error calling Hybrid Bot: {e}",
+                    "full_response": {}
+                })
 
 # -------------------------------------------------------
-# 10) Display the chat histories in 3 columns with borders
+# 11) Display the chat histories in 3 columns with borders
 # -------------------------------------------------------
 st.markdown("<hr>", unsafe_allow_html=True)  # Horizontal line before chat sections
 
@@ -265,7 +376,7 @@ with col3:
     display_chat(st.session_state["col3_chatHistory"], container_id="chat-container-3")
 
 # -----------------------------------------
-# 11) Auto-scroll to page bottom if needed
+# 12) Auto-scroll to page bottom if needed
 # -----------------------------------------
 if st.session_state['asked_any_bot']:
     # Use a script to scroll to the bottom of the page
