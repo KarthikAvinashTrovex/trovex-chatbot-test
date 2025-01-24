@@ -154,21 +154,21 @@ def display_chat(chat_history):
                     st.markdown(f"### Reference {ref_idx}: {question}\n")
 
                     # Display Top Sections
-                    # if top_sections:
-                    #     st.markdown("**Top Sections:**")
-                    #     for sec in top_sections:
-                    #         sec_title = sec.get("title", "No title")
-                    #         sec_text = sec.get("section_text", "No section text available.")
-                    #         sec_page = sec.get("page_idx", "N/A")
-                    #         similarity = sec.get("similarity", "N/A")
-                    #         st.markdown(
-                    #             f"- **Title:** {sec_title}\n"
-                    #             f"  - **Page Index:** {sec_page}\n"
-                    #             f"  - **Similarity:** {similarity}\n\n"
-                    #             f"  ```\n"
-                    #             f"{sec_text}\n"
-                    #             f"  ```\n"
-                    #         )
+                    if top_sections:
+                        st.markdown("**Top Sections:**")
+                        for sec in top_sections:
+                            sec_title = sec.get("title", "No title")
+                            sec_text = sec.get("section_text", "No section text available.")
+                            sec_page = sec.get("page_idx", "N/A")
+                            similarity = sec.get("similarity", "N/A")
+                            st.markdown(
+                                f"- **Title:** {sec_title}\n"
+                                f"  - **Page Index:** {sec_page}\n"
+                                f"  - **Similarity:** {similarity}\n\n"
+                                f"  ```\n"
+                                f"{sec_text}\n"
+                                f"  ```\n"
+                            )
 
                     # Display Top Chunks
                     if top_chunks:
@@ -187,22 +187,22 @@ def display_chat(chat_history):
                                 f"  ```\n"
                             )
 
-                    # # Display Top Tables
-                    # if top_tables:
-                    #     st.markdown("**Top Tables:**")
-                    #     for tbl in top_tables:
-                    #         tbl_id = tbl.get("table_id", "N/A")
-                    #         tbl_text = tbl.get("text", "No table text available.")
-                    #         tbl_score = tbl.get("score", "N/A")
-                    #         tbl_page = tbl.get("page_idx", "N/A")
-                    #         st.markdown(
-                    #             f"- **Table ID:** {tbl_id}\n"
-                    #             f"  - **Score:** {tbl_score}\n"
-                    #             f"  - **Page Index:** {tbl_page}\n\n"
-                    #             f"  ```\n"
-                    #             f"{tbl_text}\n"
-                    #             f"  ```\n"
-                    #         )
+                    # Display Top Tables
+                    if top_tables:
+                        st.markdown("**Top Tables:**")
+                        for tbl in top_tables:
+                            tbl_id = tbl.get("table_id", "N/A")
+                            tbl_text = tbl.get("text", "No table text available.")
+                            tbl_score = tbl.get("score", "N/A")
+                            tbl_page = tbl.get("page_idx", "N/A")
+                            st.markdown(
+                                f"- **Table ID:** {tbl_id}\n"
+                                f"  - **Score:** {tbl_score}\n"
+                                f"  - **Page Index:** {tbl_page}\n\n"
+                                f"  ```\n"
+                                f"{tbl_text}\n"
+                                f"  ```\n"
+                            )
                     st.markdown("---")  # Separator between references
 
         elif msg["role"] == "user":
