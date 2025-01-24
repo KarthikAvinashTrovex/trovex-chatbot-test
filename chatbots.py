@@ -279,7 +279,7 @@ if st.button("Ask Hybrid Bot"):
             "question": user_question,
             "chat_history": st.session_state["hybrid_chatHistory"]
         }
-        with st.spinner("Waiting for the Hybrid Bot to respond... max 30 sec :("):
+        with st.spinner("Waiting for the Hybrid Bot to respond... max 20 sec :("):
             try:
                 response = requests.post(url_hBot, json=payload)
                 response.raise_for_status()  # Raise exception for HTTP errors
