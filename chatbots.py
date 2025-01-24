@@ -221,14 +221,17 @@ def display_chat(chat_history):
     st.markdown(f"</div>", unsafe_allow_html=True)
 
 # -------------------------------------------------------
-# 5) Function to Update Base URL
+# 5) Function to Update Base URL (Remove trailing '/')
 # -------------------------------------------------------
 def update_base_url(new_url):
     if new_url:
-        st.session_state["base_url"] = new_url
-        st.success("API base URL updated successfully!")
+        # Remove trailing slash if present
+        clean_url = new_url.rstrip("/")
+        st.session_state["base_url"] = clean_url
+        st.success(f"API base URL updated successfully to: {clean_url}")
     else:
         st.warning("Please enter a valid URL.")
+
 
 # -------------------------------------------------------
 # 6) Main Layout
