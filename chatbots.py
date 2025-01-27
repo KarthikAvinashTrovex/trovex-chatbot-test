@@ -98,6 +98,9 @@ if "json_popups" not in st.session_state:
 # -------------------------------------------------------
 # 4) Helper Function to Display Chat Messages
 # -------------------------------------------------------
+# -------------------------------------------------------
+# 4) Helper Function to Display Chat Messages
+# -------------------------------------------------------
 def display_chat(chat_history):
     """
     Display the conversation with the assistant.
@@ -109,7 +112,7 @@ def display_chat(chat_history):
     .chat-container {
         max-height: 600px;
         overflow-y: auto;
-        background-color: #FFFFFF;
+        background-color: #f9f9f9;
         padding: 20px;
         border-radius: 10px;
         border: 1px solid #e0e0e0;
@@ -125,7 +128,7 @@ def display_chat(chat_history):
     # Display each message
     for idx, msg in enumerate(chat_history):
         if msg["role"] == "assistant":
-            # Display assistant message
+            # Display assistant message (final_output)
             st.markdown(
                 f"""
                 <div style='text-align: left; background-color: #F0F0F0; 
@@ -135,76 +138,30 @@ def display_chat(chat_history):
                 """,
                 unsafe_allow_html=True
             )
-            # Add expander for detailed response
-            with st.expander("View Detailed Response"):
-                full_response = msg.get("full_response", {})
-                final_output = full_response.get("final_output", "")
-                top_references = full_response.get("top_references", [])
 
-                # Display Final Output
-                # st.markdown(f"**Final Output:**\n\n{final_output}\n\n---")
+            # Check if 'full_response' exists and contains 'top_references'
+            full_response = msg.get("full_response", {})
+            top_references = full_response.get("top_references", [])
+            sources = full_response.get("source", [])
+            page_nos = full_response.get("pageNos", [])
 
-                # Iterate through top_references
-                for ref_idx, reference in enumerate(top_references, start=1):
-                    question = reference.get("question", "No question provided.")
-                    top_sections = reference.get("top_sections", [])
-                    top_chunks = reference.get("top_chunks", [])
-                    top_tables = reference.get("top_tables", [])
-
-                    st.markdown(f"### Reference {ref_idx}: {question}\n")
-
-                    # Display Top Sections
-                    if top_sections:
-                        st.markdown("**Top Sections:**")
-                        for sec in top_sections:
-                            sec_title = sec.get("title", "No title")
-                            sec_text = sec.get("section_text", "No section text available.")
-                            sec_page = sec.get("page_idx", "N/A")
-                            similarity = sec.get("similarity", "N/A")
+            if top_references and sources and page_nos:
+                # Ensure all lists are of the same length
+                if len(top_references) == len(sources) == len(page_nos):
+                    with st.expander("🔍 Top References"):
+                        for i in range(len(top_references)):
                             st.markdown(
-                                f"- **Title:** {sec_title}\n"
-                                f"  - **Page Index:** {sec_page}\n"
-                                f"  - **Similarity:** {similarity}\n\n"
-                                f"  ```\n"
-                                f"{sec_text}\n"
-                                f"  ```\n"
+                                f"**Reference {i+1}:** {top_references[i]}<br>"
+                                f"*Source:* `{sources[i]}` | *Page:* {page_nos[i]}",
+                                unsafe_allow_html=True
                             )
-
-                    # Display Top Chunks
-                    if top_chunks:
-                        st.markdown("**Top Chunks:**")
-                        for chk in top_chunks:
-                            chk_id = chk.get("chunk_id", "N/A")
-                            chk_text = chk.get("text", "No text available.")
-                            chk_score = chk.get("score", "N/A")
-                            chk_page = chk.get("page_idx", "N/A")
-                            st.markdown(
-                                f"- **Chunk ID:** {chk_id}\n"
-                                f"  - **Score:** {chk_score}\n"
-                                f"  - **Page Index:** {chk_page}\n\n"
-                                f"  ```\n"
-                                f"{chk_text}\n"
-                                f"  ```\n"
-                            )
-
-                    # Display Top Tables
-                    if top_tables:
-                        st.markdown("**Top Tables:**")
-                        for tbl in top_tables:
-                            tbl_id = tbl.get("table_id", "N/A")
-                            tbl_text = tbl.get("text", "No table text available.")
-                            tbl_score = tbl.get("score", "N/A")
-                            tbl_page = tbl.get("page_idx", "N/A")
-                            st.markdown(
-                                f"- **Table ID:** {tbl_id}\n"
-                                f"  - **Score:** {tbl_score}\n"
-                                f"  - **Page Index:** {tbl_page}\n\n"
-                                f"  ```\n"
-                                f"{tbl_text}\n"
-                                f"  ```\n"
-                            )
-                    st.markdown("---")  # Separator between references
-
+                            st.markdown("---")
+                else:
+                    # Handle mismatched list lengths
+                    st.warning("Warning: The lengths of 'top_references', 'source', and 'pageNos' do not match.")
+            else:
+                st.info("No additional references available.")
+        
         elif msg["role"] == "user":
             # Display user message
             st.markdown(
@@ -216,7 +173,7 @@ def display_chat(chat_history):
                 """,
                 unsafe_allow_html=True
             )
-    
+
     # Close container div
     st.markdown(f"</div>", unsafe_allow_html=True)
 
@@ -280,7 +237,10 @@ if st.button("Ask Hybrid Bot"):
 
         payload = {
             "question": user_question,
-            "chat_history": st.session_state["hybrid_chatHistory"]
+            "chat_history": st.session_state["hybrid_chatHistory"],
+            "index_name": "358deb70-f5fb-441b-94f5-aac63e574a9b",
+            "prompt":"You are a helpful assistant working for Bajaj Allianz Life Insurance Company also known as Bajaj Allianz. Use the question, source documents, and the conversation history to answer the question in a conversational manner. Your role is to provide accurate, concise answers about Bajaj Allianz products, services, and internal content. You cannot take independent actions; you may only respond to questions and offer guidance. You will always stay in your character no matter what. Respond in the language in which user asked the question. If the user asked the question in English, respond strictly in English. If the user asked the question in Hinglish, respond in Hinglish. Do not exceed 50 words in your initial response. If the user asks for more details, expand your response for up to 150 words. While replying in Hinglish, make sure translation is context-aware and spoken as a female. Answer strictly based on the provided context. Do not incorporate information from outside sources or hallucinate. For questions that are too general, ask follow-up questions to gain clarity and then respond with an appropriate answer. For unrelated questions: 'I'm here to assist with Bajaj Allianz Life-related questions. Let me know if there's something specific about Bajaj Allianz Life I can help with.' For inappropriate language: 'I'm here to provide helpful support. Let's keep our conversation positive. How can I assist you with Bajaj Allianz Life offerings?' Answer the question based on the relevant chunks and tables retrieved. First, see if the chunks and tables answer the sub-questions properly, then only answer the main question using the answers for sub-questions. Finally answer the main question only.",
+            "language":"English"
         }
         with st.spinner("Waiting for the Hybrid Bot to respond... max 20 sec :("):
             try:
