@@ -162,9 +162,11 @@ with col1:
     st.markdown("## Settings")
     st.markdown("##### API Endpoint Configuration")
     with st.form(key='base_url_form'):
+        # default_url = "http://127.0.0.1:8000"
+        default_url = "https://60a1-2402-e280-212e-127-f84a-6a3e-2ba6-ff8e.ngrok-free.app"
         base_url_input = st.text_input(
             "Enter API base URL (e.g., http://127.0.0.1:8000 or https://<ngrok_link>):",
-            value=st.session_state.get("base_url", "http://127.0.0.1:8000")
+            value=st.session_state.get("base_url", default_url)
         )
         submit_button = st.form_submit_button(label='Save')
         if submit_button:
