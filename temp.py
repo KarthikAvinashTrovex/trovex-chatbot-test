@@ -151,7 +151,7 @@ with col1:
         if submit_button:
             def update_base_url(new_url):
                 if new_url:
-                    clean_url = new_url.rstrip("/")
+                    clean_url = new_url.strip().rstrip("/")
                     st.session_state["base_url"] = clean_url
                     st.success(f"API base URL updated successfully to: {clean_url}")
                 else:
