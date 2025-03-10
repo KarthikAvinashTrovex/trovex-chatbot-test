@@ -92,9 +92,6 @@ hr {
 """
 st.markdown(custom_css, unsafe_allow_html=True)
 
-# default_url = "http://127.0.0.1:8000"
-default_url = "https://60a1-2402-e280-212e-127-f84a-6a3e-2ba6-ff8e.ngrok-free.app"
-        
 # -------------------------------------------------------
 # 2) Session State Initialization
 # -------------------------------------------------------
@@ -165,7 +162,8 @@ with col1:
     st.markdown("## Settings")
     st.markdown("##### API Endpoint Configuration")
     with st.form(key='base_url_form'):
-        
+        # default_url = "http://127.0.0.1:8000"
+        default_url = "https://60a1-2402-e280-212e-127-f84a-6a3e-2ba6-ff8e.ngrok-free.app"
         base_url_input = st.text_input(
             "Enter API base URL (e.g., http://127.0.0.1:8000 or https://<ngrok_link>):",
             value=st.session_state.get("base_url", default_url)
@@ -249,7 +247,7 @@ with col2:
                 "role": "user",
                 "content": user_question
             })
-            base_url = st.session_state.get("base_url", default_url).rstrip('/')
+            base_url = st.session_state.get("base_url", "http://127.0.0.1:8000").rstrip('/')
             # Update the URL as needed.
             url_hBot = f"{base_url}/chatbotazure/retrieve-response-genbot/"
             # Use advanced parameters stored in session state
@@ -331,6 +329,8 @@ with col2:
                     unsafe_allow_html=True
                 )
                 full_response = msg.get("full_response", {})
+                keys_to_exclude = ["final_output","question","chat_history", "new_usage","detailed_usage","agent_form_details","travel_form_details"]
+                filtered_json = {k: v for k, v in full_response.items() if k not in keys_to_exclude}
                 with st.expander("🔍 Top References"):
                     # st.markdown(f"Pipeline: **{full_response['pipeline']}**")
                     # st.markdown(f"Standalone: **{full_response['standAloneQuestion']}**")
@@ -383,7 +383,7 @@ with col2:
                     # st.markdown(f"Time Consumption: {total_t}")
                     # st.json(full_response["time_taken"])
                     # st.markdown("Detailed Usage: ")
-                    st.json(full_response)
+                    st.json(filtered_json)
                     
             elif msg["role"] == "user":
                 st.markdown(
