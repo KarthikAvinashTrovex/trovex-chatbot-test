@@ -81,8 +81,9 @@ hr {
 
 /* Style for preformatted prompt display */
 .preformatted {
+    color: #000; 
+    background-color: #D0F0FF;
     white-space: pre-wrap;
-    background-color: #f0f0f0;
     padding: 10px;
     border-radius: 6px;
     border: 1px solid #ccc;
@@ -132,25 +133,47 @@ if "bot_prompt" not in st.session_state:
     
     # iffco_prompt = "You are an expert assistant. Given the following context, answer the question directly and concisely. Use only the provided context to derive your answer—do not include any additional commentary or explanations. If the context does not contain enough information to answer the question, simply state that no relevant information is available. Return only the answer."
     
-    shorelight_prompt = """
-You are a helpful assistant representing Shorelight, dedicated to supporting international students at American University. Utilize the user's question, available source documents, and conversation history to provide accurate, concise, and contextually relevant answers about American University's programs, student experiences, career opportunities, and admissions information.
+#     shorelight_prompt = """
+# You are a helpful assistant representing Shorelight, dedicated to supporting international students at American University. Utilize the user's question, available source documents, and conversation history to provide accurate, concise, and contextually relevant answers about American University's programs, student experiences, career opportunities, and admissions information.
 
-If the user's question lacks necessary details and relevant information is available in the provided documents, ask a follow-up question before responding. Your responses should be strictly based on the provided documents; do not use external information or make assumptions beyond the available sources.
+# If the user's question lacks necessary details and relevant information is available in the provided documents, ask a follow-up question before responding. Your responses should be strictly based on the provided documents; do not use external information or make assumptions beyond the available sources.
 
-- If asked in English, respond strictly in English.
-- If asked in Hinglish, respond in Hinglish, ensuring a natural and context-aware translation.
+# - If asked in English, respond strictly in English.
+# - If asked in Hinglish, respond in Hinglish, ensuring a natural and context-aware translation.
 
-For greetings or when no content is retrieved, introduce yourself and provide a brief overview of how you can assist with information about American University and Shorelight's services.
+# For greetings or when no content is retrieved, introduce yourself and provide a brief overview of how you can assist with information about American University and Shorelight's services.
 
-Keep initial responses within 50 words. If the user requests further details, expand up to 150 words. Include relevant links from retrieved documents as references without additional explanatory text.
+# Keep initial responses within 50 words. If the user requests further details, expand up to 150 words. Include relevant links from retrieved documents as references without additional explanatory text.
 
-For unrelated queries: "I'm here to assist with questions related to Shorelight and American University. Let me know how I can help."
-For inappropriate language: "Let's keep our conversation respectful. How can I assist you with Shorelight or American University programs today?"
+# For unrelated queries: "I'm here to assist with questions related to Shorelight and American University. Let me know how I can help."
+# For inappropriate language: "Let's keep our conversation respectful. How can I assist you with Shorelight or American University programs today?"
 
-Always ensure clarity and relevance, addressing main questions only after considering relevant sub-questions based on the retrieved context.
-"""
+# Always ensure clarity and relevance, addressing main questions only after considering relevant sub-questions based on the retrieved context.
+# """
 
-    st.session_state["bot_prompt"] = shorelight_prompt
+    sml_prompt=(
+                "You are a helpful assistant working for commercial-vehicle manufacturer SML ISUZU Limited, "
+                "commonly called SML ISUZU or SMLI. Use the question, source documents, and the conversation "
+                "history to answer the question in a conversational manner. If any information is missing in "
+                "the question, ask a follow-up question to get those values before any calculations. Your role "
+                "is to provide accurate, concise answers about SML ISUZU products, services, network, career "
+                "info, and other internal content. You cannot take independent actions; you may only respond to "
+                "questions and offer guidance. You will always stay in your character no matter what. Respond in "
+                "the language in which the user asked the question. If the user asked the question in English, "
+                "respond strictly in English. If the user asked the question in Hinglish, respond in Hinglish. "
+                "Do not exceed 58 words in your initial response. If the user asks for more details, expand your "
+                "response for up to 166 words. While replying in Hinglish, make sure translation is context-aware "
+                "and spoken as a female. Answer strictly based on the provided context. Do not incorporate information "
+                "from outside sources or hallucinate. For questions that are too general, ask follow-up questions to "
+                "gain clarity and then expand with an appropriate answer. For unrelated questions: "
+                "'I'm here to assist with SML ISUZU-related queries. Let me know if there's something specific about "
+                "SML ISUZU I can help with.' For inappropriate language: 'I'm here to provide helpful support. Let's "
+                "keep our conversation positive. How can I assist you with SML ISUZU offerings?' Answer the question "
+                "based on the relevant chunks and tables retrieved. First, see if the chunks and tables answer the "
+                "sub-questions properly, then only answer the main question using the answers for sub-questions. "
+                "Finally, answer the main question only."
+            )
+    st.session_state["bot_prompt"] = sml_prompt
 
 # -------------------------------------------------------
 # 3) Layout: Two Columns (Left: Settings, Right: Chat)
@@ -160,10 +183,30 @@ col1, col2 = st.columns([1, 2])
 # Left Column: Settings
 with col1:
     st.markdown("## Settings")
+    st.markdown("##### Select Endpoint")
+    with st.form(key='endpoint_form'):
+        endpoint_options = [
+            "retrieve-response-genbot",
+            "retrieve-response-hybrid-bot1",
+            "retrieve-response-hybrid-bot2"
+        ]
+        default_idx = endpoint_options.index(
+            st.session_state.get("endpoint", "retrieve-response-genbot")
+        )
+        endpoint = st.selectbox(
+            "Choose which endpoint to call:",
+            options=endpoint_options,
+            index=default_idx
+        )
+        save_ep = st.form_submit_button("Save Endpoint")
+        if save_ep:
+            st.session_state["endpoint"] = endpoint
+            st.success(f"Endpoint set to: `{endpoint}/`")
+
     st.markdown("##### API Endpoint Configuration")
     with st.form(key='base_url_form'):
         # default_url = "http://127.0.0.1:8000"
-        default_url = "https://60a1-2402-e280-212e-127-f84a-6a3e-2ba6-ff8e.ngrok-free.app"
+        default_url = " https://5dff-2402-e280-212e-127-acca-df2-5e9f-360e.ngrok-free.app"
         base_url_input = st.text_input(
             "Enter API base URL (e.g., http://127.0.0.1:8000 or https://<ngrok_link>):",
             value=st.session_state.get("base_url", default_url)
@@ -185,7 +228,7 @@ with col1:
     with st.form(key='advanced_params'):
         index_name_input = st.text_input(
             "Index Name",
-            value=st.session_state.get("index_name", "7adf2fcf-5b92-4fae-8be0-b39fdd4380d1")
+            value=st.session_state.get("index_name", "d4855375-b44a-42a2-8688-5fe0333a564b")
         )
         plain_input = st.selectbox(
             "Plain Retrieval - 1; Hierarchical Retrieval- 0;",
@@ -247,11 +290,12 @@ with col2:
                 "role": "user",
                 "content": user_question
             })
-            base_url = st.session_state.get("base_url", "http://127.0.0.1:8000").rstrip('/')
-            # Update the URL as needed.
-            url_hBot = f"{base_url}/chatbotazure/retrieve-response-genbot/"
+            base_url = st.session_state.get("base_url", "http://127.0.0.1:8000").rstrip("/")
+            endpoint = st.session_state.get("endpoint", "retrieve-response-genbot")
+            url_hBot = f"{base_url}/chatbotazure/{endpoint}/"
+            # url_hBot = f"{base_url}/chatbotazure/retrieve-response-genbot/"
             # Use advanced parameters stored in session state
-            index_name = st.session_state.get("index_name", "7adf2fcf-5b92-4fae-8be0-b39fdd4380d1")
+            index_name = st.session_state.get("index_name", "d4855375-b44a-42a2-8688-5fe0333a564b")
             payload = {
                 "question": user_question,
                 "prompt": st.session_state.get("bot_prompt", ""),
@@ -321,8 +365,8 @@ with col2:
             if msg["role"] == "assistant":
                 st.markdown(
                     f"""
-                    <div style='text-align: left; background-color: #F0F0F0; 
-                    padding: 15px; margin: 10px 0; border-radius: 8px;'>
+                    <div style='color: #000; text-align: left; background-color: #F0F0F0; 
+                                padding: 15px; margin: 10px 0; border-radius: 8px;'>
                         <b>Assistant:</b> {msg['content']}
                     </div>
                     """,
@@ -388,8 +432,8 @@ with col2:
             elif msg["role"] == "user":
                 st.markdown(
                     f"""
-                    <div style='text-align: right; background-color: #D0F0FF; 
-                    padding: 15px; margin: 10px 0; border-radius: 8px;'>
+                    <div style='color: #000; text-align: right; background-color: #D0F0FF; 
+                                padding: 15px; margin: 10px 0; border-radius: 8px;'>
                         <b>You:</b> {msg['content']}
                     </div>
                     """,
